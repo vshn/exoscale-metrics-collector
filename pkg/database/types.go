@@ -135,7 +135,7 @@ type ProductDBaaS struct {
 
 // InitConfig is used to define and then save the initial configuration
 type InitConfig struct {
-	products []db.Product
+	products []*db.Product
 	discount db.Discount
 	query    db.Query
 }
