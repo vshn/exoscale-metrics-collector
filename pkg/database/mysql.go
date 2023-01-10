@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+
 	"github.com/appuio/appuio-cloud-reporting/pkg/db"
 )
 
@@ -34,8 +35,8 @@ var mysqlProductDBaaS = []ProductDBaaS{
 	{Plan: "premium-225", Target: "1412", Amount: 14.84892},
 }
 
-func generateMysqlProducts() []db.Product {
-	products := make([]db.Product, 0, len(mysqlProductDBaaS))
+func generateMysqlProducts() []*db.Product {
+	products := make([]*db.Product, 0, len(mysqlProductDBaaS))
 	for _, p := range mysqlProductDBaaS {
 		s := dbaasSourceString{
 			Query:        queryDBaaSMysql,
@@ -50,7 +51,7 @@ func generateMysqlProducts() []db.Product {
 			Unit:   defaultUnitDBaaS,
 			During: db.InfiniteRange(),
 		}
-		products = append(products, product)
+		products = append(products, &product)
 	}
 	return products
 }

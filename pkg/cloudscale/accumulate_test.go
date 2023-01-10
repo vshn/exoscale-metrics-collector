@@ -26,6 +26,9 @@ func TestAccumulateBucketMetricsForObjectsUser(t *testing.T) {
 	organization := "inity"
 	namespace := "testnamespace"
 
+	location, err := time.LoadLocation("Europe/Zurich")
+	assert.NoError(t, err)
+
 	now := time.Now().In(location)
 	date := time.Date(now.Year(), now.Month(), now.Day()-1, 0, 0, 0, 0, now.Location())
 

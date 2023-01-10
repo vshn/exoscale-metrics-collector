@@ -4,7 +4,6 @@ go 1.18
 
 require (
 	github.com/appuio/appuio-cloud-reporting v0.5.0
-	github.com/ccremer/go-command-pipeline v0.20.0
 	github.com/cloudscale-ch/cloudscale-go-sdk/v2 v2.0.1
 	github.com/exoscale/egoscale v0.90.1
 	github.com/go-logr/logr v1.2.3

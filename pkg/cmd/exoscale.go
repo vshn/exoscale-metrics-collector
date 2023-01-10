@@ -84,22 +84,25 @@ func ExoscaleCmds() *cli.Command {
 				Usage:  "Get metrics from object storage service",
 				Before: addCommandName,
 				Action: func(c *cli.Context) error {
-					log := log.AppLogger(c.Context)
-					ctrl.SetLogger(log)
+					logger := log.AppLogger(c.Context)
+					ctrl.SetLogger(logger)
 
-					log.Info("Creating Exoscale client")
+					logger.Info("Creating Exoscale client")
 					exoscaleClient, err := exoscale.InitClient(accessKey, secret)
 					if err != nil {
 						return fmt.Errorf("exoscale client: %w", err)
 					}
 
-					log.Info("Creating k8s client")
+					logger.Info("Creating k8s client")
 					k8sClient, err := cluster.NewClient(kubeconfig, k8sServerURL, k8sServerToken)
 					if err != nil {
 						return fmt.Errorf("k8s client: %w", err)
 					}
 
-					o := sos.NewObjectStorage(exoscaleClient, k8sClient, dbURL)
+					o, err := sos.NewObjectStorage(exoscaleClient, k8sClient, dbURL)
+					if err != nil {
+						return fmt.Errorf("object storage: %w", err)
+					}
 					return o.Execute(c.Context)
 				},
 			},
@@ -108,22 +111,25 @@ func ExoscaleCmds() *cli.Command {
 				Usage:  "Get metrics from database service",
 				Before: addCommandName,
 				Action: func(c *cli.Context) error {
-					log := log.AppLogger(c.Context)
-					ctrl.SetLogger(log)
+					logger := log.AppLogger(c.Context)
+					ctrl.SetLogger(logger)
 
-					log.Info("Creating Exoscale client")
+					logger.Info("Creating Exoscale client")
 					exoscaleClient, err := exoscale.InitClient(accessKey, secret)
 					if err != nil {
 						return fmt.Errorf("exoscale client: %w", err)
 					}
 
-					log.Info("Creating k8s client")
+					logger.Info("Creating k8s client")
 					k8sClient, err := cluster.NewDynamicClient(kubeconfig, k8sServerURL, k8sServerToken)
 					if err != nil {
 						return fmt.Errorf("k8s client: %w", err)
 					}
 
-					o := dbaas.NewDBaaSService(exoscaleClient, k8sClient, dbURL)
+					o, err := dbaas.NewDBaaSService(exoscaleClient, k8sClient, dbURL)
+					if err != nil {
+						return fmt.Errorf("dbaas service: %w", err)
+					}
 					return o.Execute(c.Context)
 				},
 			},

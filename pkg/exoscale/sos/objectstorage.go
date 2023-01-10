@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	pipeline "github.com/ccremer/go-command-pipeline"
 	egoscale "github.com/exoscale/egoscale/v2"
 	"github.com/exoscale/egoscale/v2/oapi"
-	"github.com/vshn/exoscale-metrics-collector/pkg/database"
 	db "github.com/vshn/exoscale-metrics-collector/pkg/database"
 	common "github.com/vshn/exoscale-metrics-collector/pkg/exoscale"
 	exoscalev1 "github.com/vshn/provider-exoscale/apis/exoscale/v1"
@@ -20,11 +18,9 @@ import (
 
 // ObjectStorage gathers bucket data from exoscale provider and cluster and saves to the database
 type ObjectStorage struct {
-	k8sClient         k8s.Client
-	exoscaleClient    *egoscale.Client
-	database          *db.SosDatabase
-	bucketDetails     []BucketDetail
-	aggregatedBuckets map[db.Key]db.Aggregated
+	k8sClient      k8s.Client
+	exoscaleClient *egoscale.Client
+	database       *db.SosDatabase
 }
 
 // BucketDetail a k8s bucket object with relevant data
@@ -33,16 +29,23 @@ type BucketDetail struct {
 }
 
 // NewObjectStorage creates an ObjectStorage with the initial setup
-func NewObjectStorage(exoscaleClient *egoscale.Client, k8sClient k8s.Client, databaseURL string) ObjectStorage {
-	return ObjectStorage{
+func NewObjectStorage(exoscaleClient *egoscale.Client, k8sClient k8s.Client, databaseURL string) (*ObjectStorage, error) {
+	location, err := time.LoadLocation(common.ExoscaleTimeZone)
+	if err != nil {
+		return nil, fmt.Errorf("cannot initialize location from time zone %s: %w", location, err)
+	}
+	now := time.Now().In(location)
+	previousDay := now.Day() - 1
+	billingDate := time.Date(now.Year(), now.Month(), previousDay, common.ExoscaleBillingHour, 0, 0, 0, now.Location())
+
+	return &ObjectStorage{
 		exoscaleClient: exoscaleClient,
 		k8sClient:      k8sClient,
 		database: &db.SosDatabase{
-			Database: db.Database{
-				URL: databaseURL,
-			},
+			URL:         databaseURL,
+			BillingDate: billingDate,
 		},
-	}
+	}, nil
 }
 
 // Execute executes the main business logic for this application by gathering, matching and saving data to the database
@@ -50,37 +53,46 @@ func (o *ObjectStorage) Execute(ctx context.Context) error {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("Running metrics collector by step")
 
-	p := pipeline.NewPipeline[context.Context]()
-	p.WithSteps(
-		p.NewStep("Fetch managed buckets and namespaces", o.fetchManagedBucketsAndNamespaces),
-		p.NewStep("Get bucket usage", o.getBucketUsage),
-		p.NewStep("Get billing date", o.getBillingDate),
-		p.NewStep("Save to database", o.saveToDatabase),
-	)
-	return p.RunWithContext(ctx)
+	detail, err := o.fetchManagedBucketsAndNamespaces(ctx)
+	if err != nil {
+		return fmt.Errorf("fetchManagedBucketsAndNamespaces: %w", err)
+	}
+	aggregated, err := o.getBucketUsage(ctx, detail)
+	if err != nil {
+		return fmt.Errorf("getBucketUsage: %w", err)
+	}
+	if len(aggregated) == 0 {
+		log.Info("no buckets to be saved to the database")
+		return nil
+	}
+
+	err = o.database.Execute(ctx, aggregated)
+	if err != nil {
+		return fmt.Errorf("db execute: %w", err)
+	}
+	return nil
 }
 
 // getBucketUsage gets bucket usage from Exoscale and matches them with the bucket from the cluster
 // If there are no buckets in Exoscale, the API will return an empty slice
-func (o *ObjectStorage) getBucketUsage(ctx context.Context) error {
+func (o *ObjectStorage) getBucketUsage(ctx context.Context, bucketDetails []BucketDetail) (map[db.Key]db.Aggregated, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("Fetching bucket usage from Exoscale")
 	resp, err := o.exoscaleClient.ListSosBucketsUsageWithResponse(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	aggregatedBuckets := getAggregatedBuckets(ctx, *resp.JSON200.SosBucketsUsage, o.bucketDetails)
+	aggregatedBuckets := getAggregatedBuckets(ctx, *resp.JSON200.SosBucketsUsage, bucketDetails)
 	if len(aggregatedBuckets) == 0 {
 		log.Info("There are no bucket usage to be saved in the database")
-		return nil
+		return nil, nil
 	}
 
-	o.aggregatedBuckets = aggregatedBuckets
-	return nil
+	return aggregatedBuckets, nil
 }
 
-func (o *ObjectStorage) fetchManagedBucketsAndNamespaces(ctx context.Context) error {
+func (o *ObjectStorage) fetchManagedBucketsAndNamespaces(ctx context.Context) ([]BucketDetail, error) {
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("Fetching buckets and namespaces from cluster")
 
@@ -88,44 +100,16 @@ func (o *ObjectStorage) fetchManagedBucketsAndNamespaces(ctx context.Context) er
 	log.V(1).Info("Listing buckets from cluster")
 	err := o.k8sClient.List(ctx, &buckets)
 	if err != nil {
-		return fmt.Errorf("cannot list buckets: %w", err)
+		return nil, fmt.Errorf("cannot list buckets: %w", err)
 	}
 
 	log.V(1).Info("Listing namespaces from cluster")
 	namespaces, err := fetchNamespaceWithOrganizationMap(ctx, o.k8sClient)
 	if err != nil {
-		return fmt.Errorf("cannot list namespaces: %w", err)
+		return nil, fmt.Errorf("cannot list namespaces: %w", err)
 	}
 
-	o.bucketDetails = addOrgAndNamespaceToBucket(ctx, buckets, namespaces)
-	return nil
-}
-
-func (o *ObjectStorage) saveToDatabase(ctx context.Context) error {
-	log := ctrl.LoggerFrom(ctx)
-	log.Info("Creating a database connection")
-
-	dctx := &database.Context{
-		Context:           ctx,
-		AggregatedObjects: &o.aggregatedBuckets,
-	}
-
-	err := o.database.Execute(dctx)
-	if err != nil {
-		log.Error(err, "Cannot save to database")
-	}
-	return nil
-}
-
-func (o *ObjectStorage) getBillingDate(_ context.Context) error {
-	location, err := time.LoadLocation(common.ExoscaleTimeZone)
-	if err != nil {
-		return fmt.Errorf("cannot initialize location from time zone %s: %w", location, err)
-	}
-	now := time.Now().In(location)
-	previousDay := now.Day() - 1
-	o.database.BillingDate = time.Date(now.Year(), now.Month(), previousDay, common.ExoscaleBillingHour, 0, 0, 0, now.Location())
-	return nil
+	return addOrgAndNamespaceToBucket(ctx, buckets, namespaces), nil
 }
 
 func getAggregatedBuckets(ctx context.Context, sosBucketsUsage []oapi.SosBucketUsage, bucketDetails []BucketDetail) map[db.Key]db.Aggregated {

@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+
 	"github.com/appuio/appuio-cloud-reporting/pkg/db"
 )
 
@@ -34,8 +35,8 @@ var postgresProductDBaaS = []ProductDBaaS{
 	{Plan: "premium-225", Target: "1411", Amount: 14.84892},
 }
 
-func generatePostgresProducts() []db.Product {
-	products := make([]db.Product, 0, len(postgresProductDBaaS))
+func generatePostgresProducts() []*db.Product {
+	products := make([]*db.Product, 0, len(postgresProductDBaaS))
 	for _, p := range postgresProductDBaaS {
 		s := dbaasSourceString{
 			Query:        queryDBaaSPostgres,
@@ -50,7 +51,7 @@ func generatePostgresProducts() []db.Product {
 			Unit:   defaultUnitDBaaS,
 			During: db.InfiniteRange(),
 		}
-		products = append(products, product)
+		products = append(products, &product)
 	}
 	return products
 }

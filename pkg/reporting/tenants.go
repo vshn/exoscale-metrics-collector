@@ -1,13 +1,14 @@
-package tenantsmodel
+package reporting
 
 import (
 	"context"
 	"fmt"
+
 	"github.com/appuio/appuio-cloud-reporting/pkg/db"
 	"github.com/jmoiron/sqlx"
 )
 
-func GetBySource(ctx context.Context, tx *sqlx.Tx, source string) (*db.Tenant, error) {
+func getTenantBySource(ctx context.Context, tx *sqlx.Tx, source string) (*db.Tenant, error) {
 	var tenants []db.Tenant
 	err := sqlx.SelectContext(ctx, tx, &tenants, `SELECT tenants.* FROM tenants WHERE source = $1 limit 1`, source)
 	if err != nil {
@@ -19,13 +20,13 @@ func GetBySource(ctx context.Context, tx *sqlx.Tx, source string) (*db.Tenant, e
 	return &tenants[0], nil
 }
 
-func Ensure(ctx context.Context, tx *sqlx.Tx, ensureTenant *db.Tenant) (*db.Tenant, error) {
-	tenant, err := GetBySource(ctx, tx, ensureTenant.Source)
+func EnsureTenant(ctx context.Context, tx *sqlx.Tx, ensureTenant *db.Tenant) (*db.Tenant, error) {
+	tenant, err := getTenantBySource(ctx, tx, ensureTenant.Source)
 	if err != nil {
 		return nil, err
 	}
 	if tenant == nil {
-		tenant, err = Create(tx, ensureTenant)
+		tenant, err = createTenant(tx, ensureTenant)
 		if err != nil {
 			return nil, err
 		}
@@ -33,7 +34,7 @@ func Ensure(ctx context.Context, tx *sqlx.Tx, ensureTenant *db.Tenant) (*db.Tena
 	return tenant, nil
 }
 
-func Create(p db.NamedPreparer, in *db.Tenant) (*db.Tenant, error) {
+func createTenant(p db.NamedPreparer, in *db.Tenant) (*db.Tenant, error) {
 	var tenant db.Tenant
 	err := db.GetNamed(p, &tenant,
 		"INSERT INTO tenants (source,target) VALUES (:source,:target) RETURNING *", in)

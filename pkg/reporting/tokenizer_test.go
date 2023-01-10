@@ -1,4 +1,4 @@
-package tokenmatcher
+package reporting
 
 import (
 	"testing"
@@ -10,7 +10,7 @@ func testBestMatch(t *testing.T, reference string, candidates []string, required
 	for i, candidate := range candidates {
 		candidatesTS[i] = NewTokenizedSource(candidate)
 	}
-	bestMatch := FindBestMatch(referenceTS, candidatesTS)
+	bestMatch := FindBestMatchingTokenizedSource(referenceTS, candidatesTS)
 	if !requiredResult.Equals(bestMatch) {
 		t.Errorf("best Match should have been '%s', was '%s'", requiredResult, bestMatch)
 	}

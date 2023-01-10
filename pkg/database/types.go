@@ -15,7 +15,7 @@ var initConfigs = map[ObjectType]InitConfig{
 
 	// ObjectStorage specific objects for billing database
 	SosType: {
-		products: []db.Product{
+		products: []*db.Product{
 			{
 				Source: querySos,
 				Target: sql.NullString{String: "1402", Valid: true},
@@ -135,7 +135,7 @@ type ProductDBaaS struct {
 
 // InitConfig is used to define and then save the initial configuration
 type InitConfig struct {
-	products []db.Product
+	products []*db.Product
 	discount db.Discount
 	query    db.Query
 }

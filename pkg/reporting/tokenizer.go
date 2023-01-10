@@ -1,8 +1,25 @@
-package tokenmatcher
+package reporting
 
-import (
-	"strings"
-)
+import "strings"
+
+// Does not do much, we mostly have this to make the code more readable (better than 2D string arrays)
+type TokenizedSource struct {
+	Tokens []string
+}
+
+func (ts TokenizedSource) String() string {
+	return strings.Join(ts.Tokens, ":")
+}
+
+func (ts *TokenizedSource) Equals(other *TokenizedSource) bool {
+	if ts == nil && other == nil {
+		return true
+	}
+	if ts == nil || other == nil {
+		return false
+	}
+	return ts.String() == other.String()
+}
 
 func NewTokenizedSource(source string) *TokenizedSource {
 	return &TokenizedSource{
@@ -44,7 +61,7 @@ func generatePatterns(reference *TokenizedSource) []*TokenizedSource {
 	return patterns
 }
 
-func FindBestMatch(reference *TokenizedSource, candidates []*TokenizedSource) *TokenizedSource {
+func FindBestMatchingTokenizedSource(reference *TokenizedSource, candidates []*TokenizedSource) *TokenizedSource {
 	patterns := generatePatterns(reference)
 	for _, pattern := range patterns {
 		for _, candidate := range candidates {

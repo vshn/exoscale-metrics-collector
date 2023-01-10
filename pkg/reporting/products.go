@@ -1,4 +1,4 @@
-package productsmodel
+package reporting
 
 import (
 	"context"
@@ -8,10 +8,9 @@ import (
 
 	"github.com/appuio/appuio-cloud-reporting/pkg/db"
 	"github.com/jmoiron/sqlx"
-	"github.com/vshn/exoscale-metrics-collector/pkg/tokenmatcher"
 )
 
-func GetBySource(ctx context.Context, tx *sqlx.Tx, source string) (*db.Product, error) {
+func getProductBySource(ctx context.Context, tx *sqlx.Tx, source string) (*db.Product, error) {
 	var products []db.Product
 	err := sqlx.SelectContext(ctx, tx, &products, `SELECT products.* FROM products WHERE source = $1`, source)
 	if err != nil {
@@ -23,7 +22,7 @@ func GetBySource(ctx context.Context, tx *sqlx.Tx, source string) (*db.Product, 
 	return &products[0], nil
 }
 
-func getBySourceQueryAndTime(ctx context.Context, tx *sqlx.Tx, sourceQuery string, timestamp time.Time) ([]db.Product, error) {
+func getProductBySourceQueryAndTime(ctx context.Context, tx *sqlx.Tx, sourceQuery string, timestamp time.Time) ([]db.Product, error) {
 	var products []db.Product
 	err := sqlx.SelectContext(ctx, tx, &products,
 		`SELECT products.* FROM products 
@@ -36,19 +35,19 @@ func getBySourceQueryAndTime(ctx context.Context, tx *sqlx.Tx, sourceQuery strin
 	return products, nil
 }
 
-func GetBestMatch(ctx context.Context, tx *sqlx.Tx, source string, timestamp time.Time) (*db.Product, error) {
-	tokenizedSource := tokenmatcher.NewTokenizedSource(source)
-	candidateProducts, err := getBySourceQueryAndTime(ctx, tx, tokenizedSource.Tokens[0], timestamp)
+func GetBestMatchingProduct(ctx context.Context, tx *sqlx.Tx, source string, timestamp time.Time) (*db.Product, error) {
+	tokenizedSource := NewTokenizedSource(source)
+	candidateProducts, err := getProductBySourceQueryAndTime(ctx, tx, tokenizedSource.Tokens[0], timestamp)
 	if err != nil {
 		return nil, err
 	}
 
-	candidateSourcePatterns := make([]*tokenmatcher.TokenizedSource, len(candidateProducts))
+	candidateSourcePatterns := make([]*TokenizedSource, len(candidateProducts))
 	for i, candidateProduct := range candidateProducts {
-		candidateSourcePatterns[i] = tokenmatcher.NewTokenizedSource(candidateProduct.Source)
+		candidateSourcePatterns[i] = NewTokenizedSource(candidateProduct.Source)
 	}
 
-	match := tokenmatcher.FindBestMatch(tokenizedSource, candidateSourcePatterns)
+	match := FindBestMatchingTokenizedSource(tokenizedSource, candidateSourcePatterns)
 
 	for _, candidateProduct := range candidateProducts {
 		if candidateProduct.Source == match.String() {
@@ -59,21 +58,21 @@ func GetBestMatch(ctx context.Context, tx *sqlx.Tx, source string, timestamp tim
 	return nil, nil
 }
 
-func Ensure(ctx context.Context, tx *sqlx.Tx, ensureProduct *db.Product) (*db.Product, error) {
-	product, err := GetBySource(ctx, tx, ensureProduct.Source)
+func EnsureProduct(ctx context.Context, tx *sqlx.Tx, ensureProduct *db.Product) (*db.Product, error) {
+	product, err := getProductBySource(ctx, tx, ensureProduct.Source)
 	if err != nil {
 		return nil, err
 	}
 	if product == nil {
-		product, err = Create(tx, ensureProduct)
+		product, err = createProduct(tx, ensureProduct)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		ensureProduct.Id = product.Id
 		if !reflect.DeepEqual(product, ensureProduct) {
-			fmt.Printf("updating product\n")
-			err = Update(tx, ensureProduct)
+			fmt.Printf("updating product\n") // FIXME(mw): logger
+			err = updateProduct(tx, ensureProduct)
 			if err != nil {
 				return nil, err
 			}
@@ -82,7 +81,7 @@ func Ensure(ctx context.Context, tx *sqlx.Tx, ensureProduct *db.Product) (*db.Pr
 	return product, nil
 }
 
-func Create(p db.NamedPreparer, in *db.Product) (*db.Product, error) {
+func createProduct(p db.NamedPreparer, in *db.Product) (*db.Product, error) {
 	var product db.Product
 	err := db.GetNamed(p, &product,
 		"INSERT INTO products (source,target,amount,unit,during) VALUES (:source,:target,:amount,:unit,:during) RETURNING *", in)
@@ -92,7 +91,7 @@ func Create(p db.NamedPreparer, in *db.Product) (*db.Product, error) {
 	return &product, err
 }
 
-func Update(p db.NamedPreparer, in *db.Product) error {
+func updateProduct(p db.NamedPreparer, in *db.Product) error {
 	var product db.Product
 	err := db.GetNamed(p, &product,
 		"UPDATE products SET source=:source, target=:target, amount=:amount, unit=:unit, during=:during WHERE id=:id RETURNING *", in)

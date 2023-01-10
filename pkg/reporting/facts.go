@@ -1,11 +1,12 @@
-package factsmodel
+package reporting
 
 import (
 	"context"
 	"fmt"
+	"reflect"
+
 	"github.com/appuio/appuio-cloud-reporting/pkg/db"
 	"github.com/jmoiron/sqlx"
-	"reflect"
 )
 
 func GetByFact(ctx context.Context, tx *sqlx.Tx, fact *db.Fact) (*db.Fact, error) {
@@ -22,13 +23,13 @@ func GetByFact(ctx context.Context, tx *sqlx.Tx, fact *db.Fact) (*db.Fact, error
 	return &facts[0], nil
 }
 
-func Ensure(ctx context.Context, tx *sqlx.Tx, ensureFact *db.Fact) (*db.Fact, error) {
+func EnsureFact(ctx context.Context, tx *sqlx.Tx, ensureFact *db.Fact) (*db.Fact, error) {
 	fact, err := GetByFact(ctx, tx, ensureFact)
 	if err != nil {
 		return nil, err
 	}
 	if fact == nil {
-		fact, err = Create(tx, ensureFact)
+		fact, err = createFact(tx, ensureFact)
 		if err != nil {
 			return nil, err
 		}
@@ -36,7 +37,7 @@ func Ensure(ctx context.Context, tx *sqlx.Tx, ensureFact *db.Fact) (*db.Fact, er
 		ensureFact.Id = fact.Id
 		if !reflect.DeepEqual(fact, ensureFact) {
 			fmt.Printf("updating facts\n")
-			err = Update(tx, ensureFact)
+			err = updateFact(tx, ensureFact)
 			if err != nil {
 				return nil, err
 			}
@@ -45,7 +46,7 @@ func Ensure(ctx context.Context, tx *sqlx.Tx, ensureFact *db.Fact) (*db.Fact, er
 	return fact, nil
 }
 
-func Create(p db.NamedPreparer, in *db.Fact) (*db.Fact, error) {
+func createFact(p db.NamedPreparer, in *db.Fact) (*db.Fact, error) {
 	var category db.Fact
 	err := db.GetNamed(p, &category,
 		"INSERT INTO facts (date_time_id, query_id, tenant_id, category_id, product_id, discount_id, quantity) VALUES (:date_time_id, :query_id, :tenant_id, :category_id, :product_id, :discount_id, :quantity) RETURNING *", in)
@@ -55,7 +56,7 @@ func Create(p db.NamedPreparer, in *db.Fact) (*db.Fact, error) {
 	return &category, err
 }
 
-func Update(p db.NamedPreparer, in *db.Fact) error {
+func updateFact(p db.NamedPreparer, in *db.Fact) error {
 	var fact db.Fact
 	err := db.GetNamed(p, &fact,
 		"UPDATE facts SET date_time_id=:date_time_id, query_id=:query_id, tenant_id=:tenant_id, category_id=:category_id, product_id=:product_id, discount_id=:discount_id, quantity=:quantity WHERE id=:id RETURNING *", in)
@@ -65,7 +66,7 @@ func Update(p db.NamedPreparer, in *db.Fact) error {
 	return err
 }
 
-func New(dateTime *db.DateTime, query *db.Query, tenant *db.Tenant, category *db.Category, product *db.Product, discount *db.Discount, quanity float64) *db.Fact {
+func NewFact(dateTime *db.DateTime, query *db.Query, tenant *db.Tenant, category *db.Category, product *db.Product, discount *db.Discount, quanity float64) *db.Fact {
 	return &db.Fact{
 		DateTimeId: dateTime.Id,
 		QueryId:    query.Id,

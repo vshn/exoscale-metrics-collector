@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+
 	"github.com/appuio/appuio-cloud-reporting/pkg/db"
 )
 
@@ -31,8 +32,8 @@ var opensearchProductDBaaS = []ProductDBaaS{
 	{Plan: "premium-30x-32", Target: "1414", Amount: 35.10523},
 }
 
-func generateOpensearchProducts() []db.Product {
-	products := make([]db.Product, 0, len(opensearchProductDBaaS))
+func generateOpensearchProducts() []*db.Product {
+	products := make([]*db.Product, 0, len(opensearchProductDBaaS))
 	for _, p := range opensearchProductDBaaS {
 		s := dbaasSourceString{
 			Query:        queryDBaaSOpensearch,
@@ -47,7 +48,7 @@ func generateOpensearchProducts() []db.Product {
 			Unit:   defaultUnitDBaaS,
 			During: db.InfiniteRange(),
 		}
-		products = append(products, product)
+		products = append(products, &product)
 	}
 	return products
 }

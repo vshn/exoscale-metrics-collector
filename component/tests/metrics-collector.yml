@@ -1,0 +1,14 @@
+parameters:
+  appuio_cloud_reporting:
+    namespace: 'appuio-cloud-reporting'
+    database:
+      name: 'reporting'
+      host: 'reporting-db.appuio-reporting.svc'
+      parameters: 'sslmode=disable'
+      password: 'passw0rd'
+      port: 5432
+  metrics_collector:
+    exoscale:
+      enabled: true
+      dbaas:
+        enabled: true

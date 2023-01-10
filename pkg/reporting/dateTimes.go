@@ -1,14 +1,15 @@
-package datetimesmodel
+package reporting
 
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/appuio/appuio-cloud-reporting/pkg/db"
 	"github.com/jmoiron/sqlx"
-	"time"
 )
 
-func GetByTimestamp(ctx context.Context, tx *sqlx.Tx, timestamp time.Time) (*db.DateTime, error) {
+func fetchDateTime(ctx context.Context, tx *sqlx.Tx, timestamp time.Time) (*db.DateTime, error) {
 	var dateTimes []db.DateTime
 	err := sqlx.SelectContext(ctx, tx, &dateTimes, `SELECT date_times.* FROM date_times WHERE timestamp = $1`, timestamp)
 	if err != nil {
@@ -20,21 +21,18 @@ func GetByTimestamp(ctx context.Context, tx *sqlx.Tx, timestamp time.Time) (*db.
 	return &dateTimes[0], nil
 }
 
-func Ensure(ctx context.Context, tx *sqlx.Tx, ensureDateTime *db.DateTime) (*db.DateTime, error) {
-	dateTime, err := GetByTimestamp(ctx, tx, ensureDateTime.Timestamp)
+func EnsureDateTime(ctx context.Context, tx *sqlx.Tx, dt *db.DateTime) (*db.DateTime, error) {
+	dateTime, err := fetchDateTime(ctx, tx, dt.Timestamp)
 	if err != nil {
 		return nil, err
 	}
 	if dateTime == nil {
-		dateTime, err = Create(tx, ensureDateTime)
-		if err != nil {
-			return nil, err
-		}
+		return createDateTime(tx, dt)
 	}
 	return dateTime, nil
 }
 
-func Create(p db.NamedPreparer, in *db.DateTime) (*db.DateTime, error) {
+func createDateTime(p db.NamedPreparer, in *db.DateTime) (*db.DateTime, error) {
 	var dateTime db.DateTime
 	err := db.GetNamed(p, &dateTime,
 		"INSERT INTO date_times (timestamp, year, month, day, hour) VALUES (:timestamp, :year, :month, :day, :hour) RETURNING *", in)
@@ -44,7 +42,7 @@ func Create(p db.NamedPreparer, in *db.DateTime) (*db.DateTime, error) {
 	return &dateTime, err
 }
 
-func New(timestamp time.Time) *db.DateTime {
+func NewDateTime(timestamp time.Time) *db.DateTime {
 	timestamp = timestamp.In(time.UTC)
 	return &db.DateTime{
 		Timestamp: timestamp,

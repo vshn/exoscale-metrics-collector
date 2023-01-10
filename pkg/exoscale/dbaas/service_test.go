@@ -30,80 +30,73 @@ func TestDBaaS_aggregatedDBaaS(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		ctx                     Context
+		dbaasDetails            []Detail
+		exoscaleDBaaS           []*egoscale.DatabaseService
 		expectedAggregatedDBaaS map[db.Key]db.Aggregated
 	}{
 		"given DBaaS details and Exoscale DBaasS, we should get the ExpectedAggregatedDBaasS": {
-			ctx: Context{
-				Context: ctx,
-				dbaasDetails: []Detail{
-					{
-						Organization: "org1",
-						DBName:       "postgres-abc",
-						Namespace:    "vshn-xyz",
-						Zone:         "ch-gva-2",
-					},
-					{
-						Organization: "org2",
-						DBName:       "postgres-def",
-						Namespace:    "vshn-abc",
-						Zone:         "ch-gva-2",
-					},
+			dbaasDetails: []Detail{
+				{
+					Organization: "org1",
+					DBName:       "postgres-abc",
+					Namespace:    "vshn-xyz",
+					Zone:         "ch-gva-2",
 				},
-				exoscaleDBaasS: []*egoscale.DatabaseService{
-					{
-						Name: strToPointer("postgres-abc"),
-						Type: strToPointer(string(db.PostgresDBaaSType)),
-						Plan: strToPointer("hobbyist-2"),
-					},
-					{
-						Name: strToPointer("postgres-def"),
-						Type: strToPointer(string(db.PostgresDBaaSType)),
-						Plan: strToPointer("business-128"),
-					},
+				{
+					Organization: "org2",
+					DBName:       "postgres-def",
+					Namespace:    "vshn-abc",
+					Zone:         "ch-gva-2",
 				},
-				aggregatedDBaasS: map[db.Key]db.Aggregated{},
+			},
+			exoscaleDBaaS: []*egoscale.DatabaseService{
+				{
+					Name: strToPointer("postgres-abc"),
+					Type: strToPointer(string(db.PostgresDBaaSType)),
+					Plan: strToPointer("hobbyist-2"),
+				},
+				{
+					Name: strToPointer("postgres-def"),
+					Type: strToPointer(string(db.PostgresDBaaSType)),
+					Plan: strToPointer("business-128"),
+				},
 			},
 			expectedAggregatedDBaaS: expectedAggregatedDBaaS,
 		},
 		"given DBaaS details and different names in Exoscale DBaasS, we should not get the ExpectedAggregatedDBaasS": {
-			ctx: Context{
-				Context: ctx,
-				dbaasDetails: []Detail{
-					{
-						Organization: "org1",
-						DBName:       "postgres-abc",
-						Namespace:    "vshn-xyz",
-						Zone:         "ch-gva-2",
-					},
-					{
-						Organization: "org2",
-						DBName:       "postgres-def",
-						Namespace:    "vshn-abc",
-						Zone:         "ch-gva-2",
-					},
+			dbaasDetails: []Detail{
+				{
+					Organization: "org1",
+					DBName:       "postgres-abc",
+					Namespace:    "vshn-xyz",
+					Zone:         "ch-gva-2",
 				},
-				exoscaleDBaasS: []*egoscale.DatabaseService{
-					{
-						Name: strToPointer("postgres-123"),
-						Type: strToPointer(string(db.PostgresDBaaSType)),
-					},
-					{
-						Name: strToPointer("postgres-456"),
-						Type: strToPointer(string(db.PostgresDBaaSType)),
-					},
+				{
+					Organization: "org2",
+					DBName:       "postgres-def",
+					Namespace:    "vshn-abc",
+					Zone:         "ch-gva-2",
 				},
-				aggregatedDBaasS: map[db.Key]db.Aggregated{},
 			},
+			exoscaleDBaaS: []*egoscale.DatabaseService{
+				{
+					Name: strToPointer("postgres-123"),
+					Type: strToPointer(string(db.PostgresDBaaSType)),
+				},
+				{
+					Name: strToPointer("postgres-456"),
+					Type: strToPointer(string(db.PostgresDBaaSType)),
+				},
+			},
+
 			expectedAggregatedDBaaS: map[db.Key]db.Aggregated{},
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := aggregateDBaaS(&tc.ctx)
-			assert.NoError(t, err)
-			assert.True(t, reflect.DeepEqual(tc.expectedAggregatedDBaaS, tc.ctx.aggregatedDBaasS))
+			aggregatedDBaaS := aggregateDBaaS(ctx, tc.exoscaleDBaaS, tc.dbaasDetails)
+			assert.True(t, reflect.DeepEqual(tc.expectedAggregatedDBaaS, aggregatedDBaaS))
 		})
 	}
 }

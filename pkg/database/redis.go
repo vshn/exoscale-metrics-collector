@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+
 	"github.com/appuio/appuio-cloud-reporting/pkg/db"
 )
 
@@ -35,8 +36,8 @@ var redisProductDBaaS = []ProductDBaaS{
 	{Plan: "premium-225", Target: "1413", Amount: 14.78450},
 }
 
-func generateRedisProducts() []db.Product {
-	products := make([]db.Product, 0, len(redisProductDBaaS))
+func generateRedisProducts() []*db.Product {
+	products := make([]*db.Product, 0, len(redisProductDBaaS))
 	for _, p := range redisProductDBaaS {
 		s := dbaasSourceString{
 			Query:        queryDBaaSRedis,
@@ -51,7 +52,7 @@ func generateRedisProducts() []db.Product {
 			Unit:   defaultUnitDBaaS,
 			During: db.InfiniteRange(),
 		}
-		products = append(products, product)
+		products = append(products, &product)
 	}
 	return products
 }

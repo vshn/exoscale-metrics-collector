@@ -1,10 +1,14 @@
 package database
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"time"
 
-	pipeline "github.com/ccremer/go-command-pipeline"
+	"github.com/appuio/appuio-cloud-reporting/pkg/db"
+	"github.com/jmoiron/sqlx"
+	"github.com/vshn/exoscale-metrics-collector/pkg/reporting"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -17,32 +21,45 @@ const (
 
 // SosDatabase contains the Database struct needed
 type SosDatabase struct {
-	Database
+	URL          string
+	BillingDate  time.Time
+	connection   *sqlx.DB
+	sourceString SourceString
 }
 
 // Execute starts the saving process of the data in the billing database
-func (s *SosDatabase) Execute(dctx *Context) error {
-	p := pipeline.NewPipeline[*Context]()
-	p.WithSteps(
-		p.NewStep("Open database connection", s.openConnection),
-		p.WithNestedSteps("Save initial billing configuration", nil,
-			p.NewStep("Begin transaction", s.beginTransaction),
-			p.NewStep("Ensure initial billing database configuration", s.ensureInitConfiguration),
-			p.NewStep("Commit transaction", s.commitTransaction),
-		).WithErrorHandler(s.rollback),
-		p.NewStep("Save buckets usage to billing database", s.saveUsageToDatabase),
-		p.NewStep("Close database connection", s.closeConnection),
-	)
-	return p.RunWithContext(dctx)
+func (s *SosDatabase) Execute(ctx context.Context, aggregated map[Key]Aggregated) error {
+	log := ctrl.LoggerFrom(ctx)
+	store, err := reporting.NewStore(s.URL, log.WithName("reporting-store"))
+	if err != nil {
+		return fmt.Errorf("reporting.NewStore: %w", err)
+	}
+	defer func() {
+		if err := store.Close(); err != nil {
+			log.Error(err, "unable to close")
+		}
+	}()
+
+	// TODO: split sos/dbaas
+	for t, config := range initConfigs {
+		if err := store.Initialize(ctx, config.products, []*db.Discount{&config.discount}, []*db.Query{&config.query}); err != nil {
+			return fmt.Errorf("init(%q): %w", t, err)
+		}
+	}
+
+	if err := s.saveUsageToDatabase(ctx, store, aggregated); err != nil {
+		return fmt.Errorf("save usage: %w", err)
+	}
+	return nil
 }
 
 // saveUsageToDatabase saves each previously aggregated buckets to the billing database
-func (s *SosDatabase) saveUsageToDatabase(dctx *Context) error {
-	log := ctrl.LoggerFrom(dctx)
-	for _, aggregated := range *dctx.AggregatedObjects {
-		err := s.ensureBucketUsage(dctx, aggregated)
+func (s *SosDatabase) saveUsageToDatabase(ctx context.Context, store *reporting.Store, aggregatedObjects map[Key]Aggregated) error {
+	log := ctrl.LoggerFrom(ctx)
+	for _, aggregated := range aggregatedObjects {
+		err := s.ensureBucketUsage(ctx, store, aggregated)
 		if err != nil {
-			log.Error(err, "Cannot save aggregated buckets service record to billing database")
+			log.Error(err, "cannot save aggregated buckets service record to billing database")
 			continue
 		}
 	}
@@ -52,8 +69,8 @@ func (s *SosDatabase) saveUsageToDatabase(dctx *Context) error {
 // ensureBucketUsage saves the aggregated buckets usage by namespace to the billing database
 // To save the correct data to the database the function also matches a relevant product, discount (if any) and query.
 // The storage usage is referred to a day before the application ran (yesterday)
-func (s *SosDatabase) ensureBucketUsage(dctx *Context, aggregatedBucket Aggregated) error {
-	log := ctrl.LoggerFrom(dctx)
+func (s *SosDatabase) ensureBucketUsage(ctx context.Context, store *reporting.Store, aggregatedBucket Aggregated) error {
+	log := ctrl.LoggerFrom(ctx)
 
 	tokens, err := aggregatedBucket.DecodeKey()
 	if err != nil {
@@ -66,41 +83,66 @@ func (s *SosDatabase) ensureBucketUsage(dctx *Context, aggregatedBucket Aggregat
 	namespace := tokens[0]
 
 	log.Info("Saving buckets usage for namespace", "namespace", namespace, "storage used", aggregatedBucket.Value)
-	dctx.Aggregated = &aggregatedBucket
-	dctx.namespace = &namespace
-	dctx.organization = &aggregatedBucket.Organization
+	organization := aggregatedBucket.Organization
+	value := aggregatedBucket.Value
 
-	s.sourceString = sosSourceString{
+	sourceString := sosSourceString{
 		ObjectType: SosType,
 		provider:   provider,
 	}
 
-	p := pipeline.NewPipeline[*Context]()
+	return store.WithTransaction(ctx, func(tx *sqlx.Tx) error {
+		tenant, err := reporting.EnsureTenant(ctx, tx, &db.Tenant{Source: organization})
+		if err != nil {
+			return fmt.Errorf("cannot ensure organization for namespace %s: %w", namespace, err)
+		}
 
-	p.WithSteps(
-		p.WithNestedSteps(fmt.Sprintf("Saving buckets usage namespace %s", namespace), nil,
-			p.NewStep("Begin database transaction", s.beginTransaction),
-			p.NewStep("Ensure necessary models", s.ensureModels),
-			p.NewStep("Get best match", s.getBestMatch),
-			p.NewStep("Adjust storage size", adjustStorageSizeUnit),
-			p.NewStep("Save facts", s.saveFacts),
-			p.NewStep("Commit transaction", s.commitTransaction),
-		).WithErrorHandler(s.rollback),
-	)
+		category, err := reporting.EnsureCategory(ctx, tx, &db.Category{Source: provider + ":" + namespace})
+		if err != nil {
+			return fmt.Errorf("cannot ensure category for namespace %s: %w", namespace, err)
+		}
 
-	return p.RunWithContext(dctx)
+		dateTime := reporting.NewDateTime(s.BillingDate)
+		dateTime, err = reporting.EnsureDateTime(ctx, tx, dateTime)
+		if err != nil {
+			return fmt.Errorf("cannot ensure date time for namespace %s: %w", namespace, err)
+		}
+
+		product, err := reporting.GetBestMatchingProduct(ctx, tx, sourceString.getSourceString(), s.BillingDate)
+		if err != nil {
+			return fmt.Errorf("cannot get product best match for namespace %s: %w", namespace, err)
+		}
+
+		discount, err := reporting.GetBestMatchingDiscount(ctx, tx, sourceString.getSourceString(), s.BillingDate)
+		if err != nil {
+			return fmt.Errorf("cannot get discount best match for namespace %s: %w", namespace, err)
+		}
+
+		query, err := reporting.GetQueryByName(ctx, tx, sourceString.getQuery())
+		if err != nil {
+			return fmt.Errorf("cannot get query by name for namespace %s: %w", namespace, err)
+		}
+
+		value, err = adjustStorageSizeUnit(value)
+		if err != nil {
+			return fmt.Errorf("adjustStorageSizeUnit: %w", err)
+		}
+
+		storageFact := reporting.NewFact(dateTime, query, tenant, category, product, discount, value)
+		_, err = reporting.EnsureFact(ctx, tx, storageFact)
+		if err != nil {
+			return fmt.Errorf("cannot save fact for namespace %s: %w", namespace, err)
+		}
+		return nil
+	})
 }
 
-func adjustStorageSizeUnit(ctx *Context) error {
-	var quantity float64
+func adjustStorageSizeUnit(value float64) (float64, error) {
 	sosUnit := initConfigs[SosType].query.Unit
 	if sosUnit == defaultUnitSos {
-		quantity = ctx.Aggregated.Value / 1024 / 1024 / 1024
-	} else {
-		return fmt.Errorf("unknown query unit %s", sosUnit)
+		return value / 1024 / 1024 / 1024, nil
 	}
-	ctx.value = &quantity
-	return nil
+	return 0, fmt.Errorf("unknown query unit %s", sosUnit)
 }
 
 type sosSourceString struct {

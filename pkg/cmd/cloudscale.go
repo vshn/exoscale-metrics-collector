@@ -74,20 +74,23 @@ func CloudscaleCmds() *cli.Command {
 				Usage:  "Get metrics from object storage service",
 				Before: addCommandName,
 				Action: func(c *cli.Context) error {
-					log := log.AppLogger(c.Context)
-					ctrl.SetLogger(log)
+					logger := log.AppLogger(c.Context)
+					ctrl.SetLogger(logger)
 
-					log.Info("Creating cloudscale client")
+					logger.Info("Creating cloudscale client")
 					cloudscaleClient := cloudscale.NewClient(http.DefaultClient)
 					cloudscaleClient.AuthToken = apiToken
 
-					log.Info("Creating k8s client")
+					logger.Info("Creating k8s client")
 					k8sClient, err := cluster.NewClient(kubeconfig, kubernetesServerURL, kubernetesServerToken)
 					if err != nil {
 						return fmt.Errorf("k8s client: %w", err)
 					}
 
-					o := cs.NewObjectStorage(cloudscaleClient, k8sClient, days, dbURL)
+					o, err := cs.NewObjectStorage(cloudscaleClient, k8sClient, days, dbURL)
+					if err != nil {
+						return fmt.Errorf("object storage: %w", err)
+					}
 					return o.Execute(c.Context)
 				},
 			},

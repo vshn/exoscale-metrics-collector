@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+
 	"github.com/appuio/appuio-cloud-reporting/pkg/db"
 )
 
@@ -29,8 +30,8 @@ var kafkaProductDBaaS = []ProductDBaaS{
 	{Plan: "premium-30x-32", Target: "1416", Amount: 51.09267},
 }
 
-func generateKafkaProducts() []db.Product {
-	products := make([]db.Product, 0, len(kafkaProductDBaaS))
+func generateKafkaProducts() []*db.Product {
+	products := make([]*db.Product, 0, len(kafkaProductDBaaS))
 	for _, p := range kafkaProductDBaaS {
 		s := dbaasSourceString{
 			Query:        queryDBaaSKafka,
@@ -45,7 +46,7 @@ func generateKafkaProducts() []db.Product {
 			Unit:   defaultUnitDBaaS,
 			During: db.InfiniteRange(),
 		}
-		products = append(products, product)
+		products = append(products, &product)
 	}
 	return products
 }
