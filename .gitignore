@@ -3,8 +3,7 @@
 /.github/release-notes.md
 
 # Build
-# TODO: Adjust binary file name
-/exoscale-metrics-collector
+/metrics-collector
 *.out
 /component/compiled
 /component/vendor
@@ -16,3 +15,4 @@
 
 # Configuration
 env
+.env

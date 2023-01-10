@@ -1,6 +1,6 @@
-= exoscale-metrics-collector
+= metrics-collector
 
-Batch job to sync usage data from the Exoscale metrics API to the https://github.com/appuio/appuio-cloud-reporting/[APPUiO Cloud Reporting] database.
+Batch job to sync usage data from the Exoscale and Cloudscale metrics APIs to the https://github.com/appuio/appuio-cloud-reporting/[APPUiO Cloud Reporting] database.
 
 Metrics are collected taking into account product (e.g. `object-storage-storage:exoscale`), source (e.g. `exoscale:namespace`), tenant (organization) and date time.
 

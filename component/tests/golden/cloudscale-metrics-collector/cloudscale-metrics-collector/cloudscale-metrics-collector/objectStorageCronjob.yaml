@@ -6,7 +6,7 @@ metadata:
     app.kubernetes.io/managed-by: commodore
     app.kubernetes.io/name: metrics-collector
     app.kubernetes.io/part-of: appuio-cloud-reporting
-  name: exoscale-metrics-collector-objectstorage
+  name: cloudscale-metrics-collector-objectstorage
   namespace: appuio-cloud-reporting
 spec:
   concurrencyPolicy: Forbid
@@ -17,7 +17,7 @@ spec:
         spec:
           containers:
             - args:
-                - exoscale objectstorage
+                - cloudscale objectstorage
               env:
                 - name: password
                   valueFrom:
@@ -33,10 +33,10 @@ spec:
                   value: postgres://$(username):$(password)@reporting-db.appuio-reporting.svc:5432/reporting?sslmode=disable
               envFrom:
                 - secretRef:
-                    name: credentials-exoscale-metrics-collector
+                    name: credentials-cloudscale-metrics-collector
               image: ghcr.io/vshn/metrics-collector:refactored-collectors
               name: metrics-collector-backfill
               resources: {}
           restartPolicy: OnFailure
-  schedule: 10 10,16,20 * * *
+  schedule: 10 4,10,16 * * *
   successfulJobsHistoryLimit: 3

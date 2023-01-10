@@ -5,15 +5,17 @@ go 1.18
 require (
 	github.com/appuio/appuio-cloud-reporting v0.5.0
 	github.com/ccremer/go-command-pipeline v0.20.0
+	github.com/cloudscale-ch/cloudscale-go-sdk/v2 v2.0.1
 	github.com/exoscale/egoscale v0.90.1
 	github.com/go-logr/logr v1.2.3
 	github.com/go-logr/zapr v1.2.3
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/stretchr/testify v1.8.0
 	github.com/urfave/cli/v2 v2.20.3
-	github.com/vshn/cloudscale-metrics-collector v0.5.2
+	github.com/vshn/provider-cloudscale v0.5.0
 	github.com/vshn/provider-exoscale v0.3.0
 	go.uber.org/zap v1.23.0
+	k8s.io/api v0.25.4
 	k8s.io/apimachinery v0.25.4
 	k8s.io/client-go v0.25.4
 	sigs.k8s.io/controller-runtime v0.13.1
@@ -84,7 +86,6 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.25.4 // indirect
 	k8s.io/apiextensions-apiserver v0.25.0 // indirect
 	k8s.io/component-base v0.25.0 // indirect
 	k8s.io/klog/v2 v2.80.1 // indirect

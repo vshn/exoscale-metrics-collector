@@ -5,20 +5,19 @@ import (
 	"fmt"
 	"time"
 
+	common "github.com/vshn/exoscale-metrics-collector/pkg/exoscale"
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	pipeline "github.com/ccremer/go-command-pipeline"
+	egoscale "github.com/exoscale/egoscale/v2"
 	"github.com/go-logr/logr"
 	"github.com/vshn/exoscale-metrics-collector/pkg/clients/exoscale"
 	"github.com/vshn/exoscale-metrics-collector/pkg/database"
+	db "github.com/vshn/exoscale-metrics-collector/pkg/database"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
-
-	egoscale "github.com/exoscale/egoscale/v2"
-	db "github.com/vshn/exoscale-metrics-collector/pkg/database"
-	"github.com/vshn/exoscale-metrics-collector/pkg/service"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -142,7 +141,7 @@ func findDBaaSDetailInNamespacesMap(managedResource unstructured.Unstructured, g
 		DBName: managedResource.GetName(),
 		Type:   groupVersionResource.Resource,
 	}
-	if namespace, exist := managedResource.GetLabels()[service.NamespaceLabel]; exist {
+	if namespace, exist := managedResource.GetLabels()[common.NamespaceLabel]; exist {
 		organization, ok := namespaces[namespace]
 		if !ok {
 			// cannot find namespace in namespace list
@@ -156,7 +155,7 @@ func findDBaaSDetailInNamespacesMap(managedResource unstructured.Unstructured, g
 	} else {
 		// cannot get namespace from DBaaS
 		log.Info("Namespace label is missing in DBaaS, skipping...",
-			"label", service.NamespaceLabel,
+			"label", common.NamespaceLabel,
 			"dbaas", managedResource.GetName())
 		return nil
 	}
@@ -220,7 +219,7 @@ func aggregateDBaaS(ctx *Context) error {
 
 // getBillingDate sets the date for which the billing takes place.
 func (s *Service) getBillingDate(_ *Context) error {
-	location, err := time.LoadLocation(service.ExoscaleTimeZone)
+	location, err := time.LoadLocation(common.ExoscaleTimeZone)
 	if err != nil {
 		return fmt.Errorf("cannot initialize location from time zone %s: %w", location, err)
 	}
@@ -269,7 +268,7 @@ func fetchNamespaceWithOrganizationMap(ctx context.Context, k8sClient dynamic.In
 
 	namespaces := map[string]string{}
 	for _, ns := range list.Items {
-		org, ok := ns.GetLabels()[service.OrganizationLabel]
+		org, ok := ns.GetLabels()[common.OrganizationLabel]
 		if !ok {
 			log.Info("Organization label not found in namespace", "namespace", ns.GetName())
 			continue

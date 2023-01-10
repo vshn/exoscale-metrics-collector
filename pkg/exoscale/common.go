@@ -1,4 +1,4 @@
-package service
+package exoscale
 
 const (
 	// OrganizationLabel represents the label used for organization when fetching the metrics

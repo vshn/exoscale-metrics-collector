@@ -1,7 +1,7 @@
 ## These are some common variables for Make
 
 PROJECT_ROOT_DIR = .
-PROJECT_NAME ?= exoscale-metrics-collector
+PROJECT_NAME ?= metrics-collector
 PROJECT_OWNER ?= vshn
 
 ## BUILD:go

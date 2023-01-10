@@ -8,13 +8,13 @@ import (
 
 	"github.com/appuio/appuio-cloud-reporting/pkg/db"
 	"github.com/jmoiron/sqlx"
-	"github.com/vshn/cloudscale-metrics-collector/pkg/categoriesmodel"
-	"github.com/vshn/cloudscale-metrics-collector/pkg/datetimesmodel"
-	"github.com/vshn/cloudscale-metrics-collector/pkg/discountsmodel"
-	"github.com/vshn/cloudscale-metrics-collector/pkg/factsmodel"
-	"github.com/vshn/cloudscale-metrics-collector/pkg/productsmodel"
-	"github.com/vshn/cloudscale-metrics-collector/pkg/queriesmodel"
-	"github.com/vshn/cloudscale-metrics-collector/pkg/tenantsmodel"
+	"github.com/vshn/exoscale-metrics-collector/pkg/categoriesmodel"
+	"github.com/vshn/exoscale-metrics-collector/pkg/datetimesmodel"
+	"github.com/vshn/exoscale-metrics-collector/pkg/discountsmodel"
+	"github.com/vshn/exoscale-metrics-collector/pkg/factsmodel"
+	"github.com/vshn/exoscale-metrics-collector/pkg/productsmodel"
+	"github.com/vshn/exoscale-metrics-collector/pkg/queriesmodel"
+	"github.com/vshn/exoscale-metrics-collector/pkg/tenantsmodel"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 

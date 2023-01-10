@@ -7,7 +7,7 @@ In particular:
 * https://hub.syn.tools/appuio-cloud-reporting/references/parameters.html#_database[database]
 
 The following list includes only parameters of this component.
-The parent key for all of them is `exoscale_metrics_collector`.
+The parent key for all of them is `metrics_collector`.
 
 See xref:how-tos/installation.adoc[Installation] for a full example.
 
@@ -19,7 +19,23 @@ default:: https://github.com/vshn/exoscale-metrics-collector/blob/master/compone
 
 Dictionary containing the container images used by this component.
 
-== `objectStorage.schedule`
+== `exoscale.enabled`
+
+[horizontal]
+type:: bool
+default:: `false`
+
+Set to true if you want to deploy the exosacle metrics collector components.
+
+=== `exoscale.objectStorage.enabled`
+
+[horizontal]
+type:: bool
+default:: `true`
+
+Enable exoscale object storage cronjob.
+
+=== `exoscale.objectStorage.schedule`
 
 [horizontal]
 type:: string
@@ -27,7 +43,7 @@ default:: `10 10,16,20 * * *`
 
 The cron schedule at which the object storage metrics collection job is spawned.
 
-== `dbaas.enabled`
+=== `exoscale.dbaas.enabled`
 
 [horizontal]
 type:: bool
@@ -35,7 +51,7 @@ default:: `false`
 
 Whether to add the DBaaS cronjob, too.
 
-== `dbaas.schedule`
+=== `exoscale.dbaas.schedule`
 
 [horizontal]
 type:: string
@@ -43,7 +59,7 @@ default:: `*/15 * * * *`
 
 The cron schedule at which the DBaaS metrics collection job is spawned, if enabled.
 
-== `secrets.credentials.stringData.EXOSCALE_API_KEY`
+=== `secrets.exoscale.credentials.stringData.EXOSCALE_API_KEY`
 
 [horizontal]
 type:: string
@@ -54,7 +70,7 @@ The Exoscale API key.
 You need to get the token from the https://portal.exoscale.com[Exoscale Console].
 You need to select the correct account (token is limited to one account), choose "IAM" in the menu and generate a new key pair.
 
-== `secrets.credentials.stringData.EXOSCALE_API_SECRET`
+=== `secrets.exoscale.credentials.stringData.EXOSCALE_API_SECRET`
 
 [horizontal]
 type:: string
@@ -65,7 +81,7 @@ The Exoscale API secret.
 Second part of the Exoscale API credentials.
 See EXOSCALE_API_KEY for instructions.
 
-== `secrets.credentials.stringData.K8S_SERVER_URL`
+=== `secrets.exoscale.credentials.stringData.K8S_SERVER_URL`
 
 [horizontal]
 type:: string
@@ -73,7 +89,7 @@ default:: Required.
 
 The Kubernetes server URL.
 
-== `secrets.credentials.stringData.K8S_TOKEN`
+=== `secrets.exoscale.credentials.stringData.K8S_TOKEN`
 
 [horizontal]
 type:: string
@@ -86,10 +102,55 @@ The Service Account connected to this token should have `get` and `list` permiss
 * `buckets.exoscale.crossplane.io`
 * `postgresqls.exoscale.crossplane.io`
 
-== `secrets.credentials.stringData.ACR_DB_URL`
+== `cloudscale.enabled`
+
+[horizontal]
+type:: bool
+default:: `false`
+
+Set to true if you want to deploy the cloudscale metrics collector components.
+
+=== `cloudscale.objectStorage.enabled`
+
+[horizontal]
+type:: bool
+default:: `true`
+
+Enable cloudscale object storage cronjob.
+
+=== `cloudscale.objectStorage.schedule`
+
+[horizontal]
+type:: string
+default:: `10 4,10,16 * * *`
+
+The cron schedule at which the object storage metrics collection job is spawned.
+
+== `secrets.cloudscale.credentials.stringData.CLOUDSCALE_API_TOKEN`
 
 [horizontal]
 type:: string
 default:: Required.
 
-The Billing Database URL.
+The cloudscale API token.
+
+You need to get the token from the https://control.cloudscale.ch[Cloudscale Control Panel].
+You need to select the correct Project (token is limited to one project), choose "API Tokens" in the menu and generate a new one.
+
+== `secrets.cloudscale.credentials.stringData.KUBERNETES_SERVER_URL`
+
+[horizontal]
+type:: string
+default:: Required.
+
+The Kubernetes server URL.
+
+== `secrets.cloudscale.credentials.stringData.KUBERNETES_SERVER_TOKEN`
+
+[horizontal]
+type:: string
+default:: Required.
+
+The token to connect to a Kubernetes cluster.
+
+The Service Account connected to this token should have `get` and `list` permissions to `buckets.cloudscale.crossplane.io` managed resource, and `get` and `list` permissions for namespaces.

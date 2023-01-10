@@ -1,5 +1,5 @@
 # Commodore takes the root dir name as the component name
-COMPONENT_NAME ?= exoscale-metrics-collector
+COMPONENT_NAME ?= metrics-collector
 COMPONENT_SUBDIR ?= $(shell basename ${PWD})
 
 compiled_path   ?= compiled/$(COMPONENT_NAME)/$(COMPONENT_NAME)
@@ -43,5 +43,5 @@ KUBENT_ARGS     ?= -c=false --helm2=false --helm3=false -e
 KUBENT_IMAGE    ?= docker.io/projectsyn/kubent:latest
 KUBENT_DOCKER   ?= $(DOCKER_CMD) $(DOCKER_ARGS) $(root_volume) --entrypoint=/app/kubent $(KUBENT_IMAGE)
 
-instance ?= exoscale-metrics-collector
-test_instances = tests/exoscale-metrics-collector.yml tests/collector-cloudscale-lpg-2.yml
+instance ?= metrics-collector
+test_instances = tests/exoscale-metrics-collector.yml tests/collector-cloudscale-lpg-2.yml tests/cloudscale-metrics-collector.yml

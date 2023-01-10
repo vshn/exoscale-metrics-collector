@@ -1,5 +1,5 @@
 applications:
-  - exoscale-metrics-collector as collector-cloudscale-lpg-2
+  - metrics-collector as collector-cloudscale-lpg-2
 
 parameters:
   appuio_cloud_reporting:
@@ -10,3 +10,6 @@ parameters:
       parameters: 'sslmode=disable'
       password: 'passw0rd'
       port: 5432
+  metrics_collector:
+    exoscale:
+      enabled: true

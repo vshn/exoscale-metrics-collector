@@ -30,15 +30,17 @@ The access to the desired cluster from where the metrics should be collected has
 [source,yaml]
 ----
 applications:
-  - exoscale-metrics-collector
+  - metrics-collector
 
 parameters:
-  exoscale_metrics_collector:
-    objectStorage:
-      schedule: '10 10,16,20 * * *'
-    dbaas:
-      enabled: true # must be manually enabled to scrape DBaas metrics
-      schedule: '*/15 * * * *'
+  metrics_collector:
+    exoscale:
+      enabled: true
+      objectStorage:
+        schedule: '10 10,16,20 * * *'
+      dbaas:
+        enabled: true # must be manually enabled to scrape DBaas metrics
+        schedule: '*/15 * * * *'
 ----
 
 See the xref:references/parameters.adoc[parameters] reference for a full list of parameters.

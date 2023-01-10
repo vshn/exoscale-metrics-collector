@@ -2,9 +2,10 @@ package database
 
 import (
 	"fmt"
-	"github.com/appuio/appuio-cloud-reporting/pkg/db"
-	"github.com/vshn/cloudscale-metrics-collector/pkg/factsmodel"
 	"strings"
+
+	"github.com/appuio/appuio-cloud-reporting/pkg/db"
+	"github.com/vshn/exoscale-metrics-collector/pkg/factsmodel"
 
 	pipeline "github.com/ccremer/go-command-pipeline"
 	ctrl "sigs.k8s.io/controller-runtime"

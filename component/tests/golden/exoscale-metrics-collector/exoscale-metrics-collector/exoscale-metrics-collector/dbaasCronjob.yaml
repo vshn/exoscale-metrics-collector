@@ -2,9 +2,9 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   labels:
-    app.kubernetes.io/component: exoscale-metrics-collector
+    app.kubernetes.io/component: metrics-collector
     app.kubernetes.io/managed-by: commodore
-    app.kubernetes.io/name: exoscale-metrics-collector
+    app.kubernetes.io/name: metrics-collector
     app.kubernetes.io/part-of: appuio-cloud-reporting
   name: exoscale-metrics-collector-dbaas
   namespace: appuio-cloud-reporting
@@ -17,7 +17,7 @@ spec:
         spec:
           containers:
             - args:
-                - dbaas
+                - exoscale dbaas
               env:
                 - name: password
                   valueFrom:
@@ -34,8 +34,8 @@ spec:
               envFrom:
                 - secretRef:
                     name: credentials-exoscale-metrics-collector
-              image: ghcr.io/vshn/exoscale-metrics-collector:v0.4.0
-              name: exoscale-metrics-collector-backfill
+              image: ghcr.io/vshn/metrics-collector:refactored-collectors
+              name: metrics-collector-backfill
               resources: {}
           restartPolicy: OnFailure
   schedule: '*/15 * * * *'

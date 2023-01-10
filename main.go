@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"sync/atomic"
+	"runtime"
 	"syscall"
 	"time"
 
-	"github.com/go-logr/logr"
 	"github.com/urfave/cli/v2"
+	"github.com/vshn/exoscale-metrics-collector/pkg/cmd"
+	"github.com/vshn/exoscale-metrics-collector/pkg/log"
 )
 
 var (
@@ -19,8 +20,8 @@ var (
 	commit  = "-dirty-"
 	date    = time.Now().Format("2006-01-02")
 
-	appName     = "exoscale-metrics-collector"
-	appLongName = "Metrics collector which gathers metrics information for exoscale services"
+	appName     = "metrics-collector"
+	appLongName = "Metrics collector which gathers metrics information for cloud services"
 )
 
 func init() {
@@ -40,8 +41,10 @@ func main() {
 }
 
 func newApp() (context.Context, context.CancelFunc, *cli.App) {
-	logInstance := &atomic.Value{}
-	logInstance.Store(logr.Discard())
+	var (
+		logLevel  int
+		logFormat string
+	)
 	app := &cli.App{
 		Name:    appName,
 		Usage:   appLongName,
@@ -49,45 +52,58 @@ func newApp() (context.Context, context.CancelFunc, *cli.App) {
 
 		EnableBashCompletion: true,
 
-		Before: setupLogging,
 		Flags: []cli.Flag{
 			&cli.IntFlag{
-				Name: "log-level", Aliases: []string{"v"},
-				EnvVars: []string{"LOG_LEVEL"},
-				Usage:   "number of the log level verbosity",
-				Value:   0,
+				Name:        "log-level",
+				Aliases:     []string{"v"},
+				EnvVars:     []string{"LOG_LEVEL"},
+				Usage:       "number of the log level verbosity",
+				Value:       0,
+				Destination: &logLevel,
 			},
 			&cli.StringFlag{
 				Name:        "log-format",
 				EnvVars:     []string{"LOG_FORMAT"},
 				Usage:       "sets the log format (values: [json, console])",
 				DefaultText: "console",
+				Destination: &logFormat,
 			},
 		},
-		Commands: []*cli.Command{
-			newObjectStorageCommand(),
-			newDBaasSCommand(),
-		},
-		ExitErrHandler: func(ctx *cli.Context, err error) {
+		Before: func(c *cli.Context) error {
+			logger, err := log.NewLogger(appName, version, logLevel, logFormat)
 			if err != nil {
-				AppLogger(ctx).Error(err, "fatal error")
+				return fmt.Errorf("before: %w", err)
+			}
+			c.Context = log.NewLoggingContext(c.Context, logger)
+			return nil
+		},
+		Action: func(c *cli.Context) error {
+			if true {
+				return cli.ShowAppHelp(c)
+			}
+			log.AppLogger(c.Context).WithValues(
+				"date", date,
+				"commit", commit,
+				"go_os", runtime.GOOS,
+				"go_arch", runtime.GOARCH,
+				"go_version", runtime.Version(),
+				"uid", os.Getuid(),
+				"gid", os.Getgid(),
+			).Info("Starting up " + appName)
+			return nil
+		},
+		Commands: []*cli.Command{
+			cmd.ExoscaleCmds(),
+			cmd.CloudscaleCmds(),
+		},
+		ExitErrHandler: func(c *cli.Context, err error) {
+			if err != nil {
+				log.AppLogger(c.Context).Error(err, "fatal error")
 				cli.HandleExitCoder(cli.Exit("", 1))
 			}
 		},
 	}
-	hasSubcommands := len(app.Commands) > 0
-	app.Action = rootAction(hasSubcommands)
 
-	parentCtx := context.WithValue(context.Background(), loggerContextKey{}, logInstance)
-	ctx, stop := signal.NotifyContext(parentCtx, syscall.SIGINT, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	return ctx, stop, app
-}
-
-func rootAction(hasSubcommands bool) func(context *cli.Context) error {
-	return func(ctx *cli.Context) error {
-		if hasSubcommands {
-			return cli.ShowAppHelp(ctx)
-		}
-		return LogMetadata(ctx)
-	}
 }

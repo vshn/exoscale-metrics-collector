@@ -7,7 +7,7 @@ RUN \
     ca-certificates \
     tzdata
 
-ENTRYPOINT ["exoscale-metrics-collector"]
-COPY exoscale-metrics-collector /usr/bin/
+ENTRYPOINT ["metrics-collector"]
+COPY metrics-collector /usr/bin/
 
 USER 65536:0

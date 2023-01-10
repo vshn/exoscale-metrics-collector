@@ -42,12 +42,12 @@ Then, run one of the available commands:
 
 * Object Storage:
 ```
-$ ./exoscale-metrics-collector objectstorage 
+$ ./metrics-collector exoscale objectstorage
 ```
 
 * DBaaS (runs metrics collector for all supported databases):
 ```
-$ ./exoscale-metrics-collector dbaas
+$ ./metrics-collector exoscale dbaas
 ```
 
 ### Billing Database
@@ -98,7 +98,7 @@ spec:
 
 Once the database is created and `Ready`, you can run locally the command:
 ```
-$ ./exoscale-metrics-collector dbaas
+$ ./metrics-collector exoscale dbaas
 ```
 
 The same works for other resources. Just apply the right claim and run the proper command.

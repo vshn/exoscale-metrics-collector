@@ -8,7 +8,7 @@ parameters:
       password: 'passw0rd'
       port: 5432
   metrics_collector:
-    exoscale:
+    cloudscale:
       enabled: true
-      dbaas:
+      objectStorage:
         enabled: true

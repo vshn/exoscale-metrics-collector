@@ -10,8 +10,8 @@ This guide provides an example how to deploy multiple instances of this componen
 [source,yaml]
 ----
 applications:
-  - exoscale-metrics-collector as collector-exoscale-ch-gva-2 <1>
-  - exoscale-metrics-collector as collector-cloudscale-rma-0 <2>
+  - metrics-collector as collector-exoscale-ch-gva-2 <1>
+  - metrics-collector as collector-cloudscale-rma-0 <2>
 parameters:
   appuio_cloud_reporting:
     namespace: 'appuio-cloud-reporting'

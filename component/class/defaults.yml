@@ -1,28 +1,46 @@
 parameters:
-  exoscale_metrics_collector:
+  metrics_collector:
     =_metadata:
       multi_instance: true
+
     secrets:
-      credentials:
-        stringData:
-          EXOSCALE_API_KEY: "?{vaultkv:${cluster:tenant}/${cluster:name}/exoscale-metrics-collector/${_instance}/exoscale-key}"
-          EXOSCALE_API_SECRET: "?{vaultkv:${cluster:tenant}/${cluster:name}/exoscale-metrics-collector/${_instance}/exoscale-secret}"
-          K8S_SERVER_URL: "?{vaultkv:${cluster:tenant}/${cluster:name}/exoscale-metrics-collector/${_instance}/cluster-server}"
-          K8S_TOKEN: "?{vaultkv:${cluster:tenant}/${cluster:name}/exoscale-metrics-collector/${_instance}/cluster-token}"
+      exoscale:
+        credentials:
+          stringData:
+            EXOSCALE_API_KEY: "?{vaultkv:${cluster:tenant}/${cluster:name}/exoscale-metrics-collector/${_instance}/exoscale-key}"
+            EXOSCALE_API_SECRET: "?{vaultkv:${cluster:tenant}/${cluster:name}/exoscale-metrics-collector/${_instance}/exoscale-secret}"
+            K8S_SERVER_URL: "?{vaultkv:${cluster:tenant}/${cluster:name}/exoscale-metrics-collector/${_instance}/cluster-server}"
+            K8S_TOKEN: "?{vaultkv:${cluster:tenant}/${cluster:name}/exoscale-metrics-collector/${_instance}/cluster-token}"
+      cloudscale:
+        credentials:
+          stringData:
+            CLOUDSCALE_API_TOKEN: "?{vaultkv:${cluster:tenant}/${cluster:name}/cloudscale-metrics-collector/${_instance}/token}"
+            KUBERNETES_SERVER_URL: "?{vaultkv:${cluster:tenant}/${cluster:name}/cloudscale-metrics-collector/${_instance}/cluster-server}"
+            KUBERNETES_SERVER_TOKEN: "?{vaultkv:${cluster:tenant}/${cluster:name}/cloudscale-metrics-collector/${_instance}/cluster-token}"
     images:
       collector:
         registry: 'ghcr.io'
-        repository: 'vshn/exoscale-metrics-collector'
-        tag: 'v0.4.0'
-    # Times in UTC! Don't run job around midnight as exoscale API may return incomplete data
+        repository: 'vshn/metrics-collector'
+        tag: 'refactored-collectors'
 
-    objectStorage:
-      # schedule for objectstorage cronjob
-      # default: Every day at minute 10 past hour 10, 16 and 20.
-      schedule: '10 10,16,20 * * *'
-
-    dbaas:
-      # enable DBaaS cronjob in addition to objectstorage cronjob.
+    exoscale:
       enabled: false
-      # schedule for DBaaS cronjob every 15min
-      schedule: '*/15 * * * *'
+      objectStorage:
+        enabled: true
+        # Times in UTC! Don't run job around midnight as exoscale API may return incomplete data
+        # schedule for objectstorage cronjob
+        # default: Every day at minute 10 past hour 10, 16 and 20.
+        schedule: '10 10,16,20 * * *'
+
+      dbaas:
+        # enable DBaaS cronjob in addition to objectstorage cronjob.
+        enabled: false
+        # schedule for DBaaS cronjob every 15min
+        schedule: '*/15 * * * *'
+
+    cloudscale:
+      enabled: false
+      objectStorage:
+        enabled: true
+        # Times in UTC!
+        schedule: '10 4,10,16 * * *'

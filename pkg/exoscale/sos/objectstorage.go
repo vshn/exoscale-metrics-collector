@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/exoscale/egoscale/v2/oapi"
-	"github.com/vshn/exoscale-metrics-collector/pkg/database"
-	"github.com/vshn/exoscale-metrics-collector/pkg/service"
-
 	pipeline "github.com/ccremer/go-command-pipeline"
 	egoscale "github.com/exoscale/egoscale/v2"
+	"github.com/exoscale/egoscale/v2/oapi"
+	"github.com/vshn/exoscale-metrics-collector/pkg/database"
 	db "github.com/vshn/exoscale-metrics-collector/pkg/database"
+	common "github.com/vshn/exoscale-metrics-collector/pkg/exoscale"
 	exoscalev1 "github.com/vshn/provider-exoscale/apis/exoscale/v1"
 	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -119,13 +118,13 @@ func (o *ObjectStorage) saveToDatabase(ctx context.Context) error {
 }
 
 func (o *ObjectStorage) getBillingDate(_ context.Context) error {
-	location, err := time.LoadLocation(service.ExoscaleTimeZone)
+	location, err := time.LoadLocation(common.ExoscaleTimeZone)
 	if err != nil {
 		return fmt.Errorf("cannot initialize location from time zone %s: %w", location, err)
 	}
 	now := time.Now().In(location)
 	previousDay := now.Day() - 1
-	o.database.BillingDate = time.Date(now.Year(), now.Month(), previousDay, service.ExoscaleBillingHour, 0, 0, 0, now.Location())
+	o.database.BillingDate = time.Date(now.Year(), now.Month(), previousDay, common.ExoscaleBillingHour, 0, 0, 0, now.Location())
 	return nil
 }
 
@@ -166,7 +165,7 @@ func addOrgAndNamespaceToBucket(ctx context.Context, buckets exoscalev1.BucketLi
 		bucketDetail := BucketDetail{
 			BucketName: bucket.Spec.ForProvider.BucketName,
 		}
-		if namespace, exist := bucket.ObjectMeta.Labels[service.NamespaceLabel]; exist {
+		if namespace, exist := bucket.ObjectMeta.Labels[common.NamespaceLabel]; exist {
 			organization, ok := namespaces[namespace]
 			if !ok {
 				// cannot find namespace in namespace list
@@ -180,7 +179,7 @@ func addOrgAndNamespaceToBucket(ctx context.Context, buckets exoscalev1.BucketLi
 		} else {
 			// cannot get namespace from bucket
 			log.Info("Namespace label is missing in bucket, skipping...",
-				"label", service.NamespaceLabel,
+				"label", common.NamespaceLabel,
 				"bucket", bucket.Name)
 			continue
 		}
@@ -202,7 +201,7 @@ func fetchNamespaceWithOrganizationMap(ctx context.Context, k8sclient client.Cli
 
 	namespaces := map[string]string{}
 	for _, ns := range list.Items {
-		org, ok := ns.Labels[service.OrganizationLabel]
+		org, ok := ns.Labels[common.OrganizationLabel]
 		if !ok {
 			log.Info("Organization label not found in namespace", "namespace", ns.Name)
 			continue
